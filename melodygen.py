@@ -1,5 +1,6 @@
 import pygame
 import random
+from music21 import midi, stream, note, chord
 
 # Initialize Pygame
 pygame.init()
@@ -17,7 +18,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
 # Define moods
-moods = {
+MOODS = {
     "happy": [60, 62, 64, 65, 67, 69, 71, 72],
     "sad": [60, 62, 63, 65, 67, 68, 70, 72],
     "mysterious": [60, 61, 63, 66, 68, 69, 72, 74],
@@ -27,30 +28,96 @@ moods = {
 # Set default mood
 current_mood = "happy"
 
+# Define constants
+NUM_NOTES = 8
+WAIT_TIME = 500
+
+
+class Button:
+    def __init__(self, mood, rect):
+        self.mood = mood
+        self.rect = rect
+
+    def is_clicked(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)
+
 
 def generate_melody(mood):
     """
-    Generate a random melody based on the selected mood.
+    Generate a melody based on the selected mood using a Markov chain approach.
     """
-    notes = moods[mood]
-    melody = [random.choice(notes) for _ in range(8)]
+    notes = MOODS[mood]
+    transition_matrix = create_transition_matrix(notes)
+    melody = generate_melody_with_markov_chain(transition_matrix, notes[0], NUM_NOTES)
+    return melody
+
+
+def create_transition_matrix(notes):
+    """
+    Create a transition matrix based on the given notes.
+    """
+    transition_matrix = {}
+    for note in notes:
+        transition_matrix[note] = {}
+
+    for i in range(len(notes) - 1):
+        current_note = notes[i]
+        next_note = notes[i + 1]
+        if next_note not in transition_matrix[current_note]:
+            transition_matrix[current_note][next_note] = 0
+        transition_matrix[current_note][next_note] += 1
+
+    for current_note in transition_matrix:
+        total_transitions = sum(transition_matrix[current_note].values())
+        for next_note in transition_matrix[current_note]:
+            transition_matrix[current_note][next_note] /= total_transitions
+
+    return transition_matrix
+
+
+def generate_melody_with_markov_chain(transition_matrix, start_note, length):
+    """
+    Generate a melody of the given length using a Markov chain approach.
+    """
+    melody = [start_note]
+    current_note = start_note
+
+    for _ in range(length - 1):
+        if current_note not in transition_matrix:
+            break
+
+        choices = list(transition_matrix[current_note].keys())
+        probabilities = list(transition_matrix[current_note].values())
+        next_note = random.choices(choices, probabilities)[0]
+        melody.append(next_note)
+        current_note = next_note
+
     return melody
 
 
 def play_melody(melody):
     """
-    Play the generated melody using Pygame.
+    Play the melody using the chosen sound library.
     """
-    pygame.mixer.music.stop()
-    pygame.mixer.music.set_volume(0.5)
-    pygame.mixer.music.load(pygame.mixer.Sound("piano.wav"))
-    pygame.mixer.music.play()
+    # Create a MIDI stream
+    melody_stream = stream.Stream()
+    for note_value in melody:
+        new_note = note.Note(note_value)
+        melody_stream.append(new_note)
 
-    for note in melody:
-        pygame.mixer.music.set_pos(0.0)
-        pygame.mixer.music.play(0, 0.0)
-        pygame.time.wait(500)
+    # Save the MIDI file
+    midi_file = midi.translate.streamToMidiFile(melody_stream)
+    midi_file.open('output.mid', 'wb')
+    midi_file.write()
+    midi_file.close()
 
+    # Load and play the MIDI file
+    mf = midi.MidiFile()
+    mf.open('output.mid')
+    mf.read()
+    mf.close()
+    sp = midi.realtime.StreamPlayer(mf)
+    sp.play()
 
 def draw_buttons():
     """
