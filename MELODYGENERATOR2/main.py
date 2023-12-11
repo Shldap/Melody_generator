@@ -11,8 +11,8 @@ def generate_chord_progression():
     return chord_progression
 
 # Example usage
-generated_chord_progression = generate_chord_progression()
-print("Chord Progression:", generated_chord_progression)
+#generated_chord_progression = generate_chord_progression()
+#print("Chord Progression:", generated_chord_progression)
 
 # Create the GUI
 window = tk.Tk()
