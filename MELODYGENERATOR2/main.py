@@ -1,14 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from melody_generator import generate_melody
-from chord_progressions import chord_progressions
 import random
-
-# Generate a random chord progression from the library
-def generate_chord_progression():
-    progression_name = random.choice(list(chord_progressions.keys()))
-    chord_progression = chord_progressions[progression_name]
-    return chord_progression
 
 # Example usage
 #generated_chord_progression = generate_chord_progression()
